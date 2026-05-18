@@ -3,6 +3,12 @@ const ctx = canvas.getContext('2d');
 const W = 600;
 const H = 600;
 
+// Load POSTAL Dude sprite
+const dudeImg = new Image();
+dudeImg.src = 'img/postal-dude.png';
+let dudeLoaded = false;
+dudeImg.onload = () => { dudeLoaded = true; };
+
 // Game state
 let state = 'menu'; // menu, playing, dead
 let score = 0;
@@ -16,9 +22,9 @@ const bird = {
   w: 56,
   h: 56,
   vy: 0,
-  gravity: 0.28,
-  flapPower: -5.8,
-  maxFall: 4.5,
+  gravity: 0.15,
+  flapPower: -4.2,
+  maxFall: 3,
   rotation: 0
 };
 
@@ -33,8 +39,8 @@ let pipeTimer = 0;
 // Particles (shell casings on death)
 let particles = [];
 
-// Sound - petition voice
-let flapCount = 0;
+// Sound - petition voice (20 second cooldown)
+let lastPetitionTime = 0;
 const petitionLines = [
   'Can you sign my petition?',
   'Sign my petition!',
@@ -78,7 +84,6 @@ function reset() {
   pipeTimer = 60;
   score = 0;
   frameCount = 0;
-  flapCount = 0;
 }
 
 function flap() {
@@ -86,12 +91,12 @@ function flap() {
     state = 'playing';
     reset();
     bird.vy = bird.flapPower;
-    flapCount = 1;
   } else if (state === 'playing') {
     bird.vy = bird.flapPower;
-    flapCount++;
-    if (flapCount % 3 === 0) {
+    const now = Date.now();
+    if (now - lastPetitionTime >= 20000) {
       sayPetition();
+      lastPetitionTime = now;
     }
   } else if (state === 'dead' && frameCount > 30) {
     state = 'menu';
@@ -298,67 +303,20 @@ function drawPostalDude() {
   ctx.save();
   ctx.translate(bird.x, bird.y);
   ctx.rotate(bird.rotation * Math.PI / 180);
-  ctx.scale(1.4, 1.4);
 
-  // Arms flapping - drawn BEHIND body, angled down/out
-  const flapAngle = state === 'playing' ? Math.sin(frameCount * 0.3) * 0.5 : Math.sin(frameCount * 0.08) * 0.15;
+  const spriteSize = 90;
 
-  // Left arm (behind body)
-  ctx.save();
-  ctx.translate(-14, 8);
-  ctx.rotate(-1.2 + flapAngle);
-  ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(-2, -2, 20, 6);
-  ctx.fillStyle = '#e8c090';
-  ctx.fillRect(16, -2, 6, 6);
-  ctx.restore();
-
-  // Right arm (behind body)
-  ctx.save();
-  ctx.translate(14, 8);
-  ctx.rotate(1.2 - flapAngle);
-  ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(-18, -2, 20, 6);
-  ctx.fillStyle = '#e8c090';
-  ctx.fillRect(-24, -2, 6, 6);
-  ctx.restore();
-
-  // Trench coat body
-  ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(-14, -4, 28, 22);
-
-  // Head
-  ctx.fillStyle = '#e8c090';
-  ctx.beginPath();
-  ctx.arc(0, -10, 12, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Sunglasses
-  ctx.fillStyle = '#111';
-  ctx.fillRect(-10, -14, 8, 5);
-  ctx.fillRect(2, -14, 8, 5);
-  ctx.fillRect(-2, -13, 4, 3);
-
-  // Goatee
-  ctx.fillStyle = '#4a3520';
-  ctx.beginPath();
-  ctx.moveTo(-3, -3);
-  ctx.lineTo(3, -3);
-  ctx.lineTo(1, 2);
-  ctx.lineTo(-1, 2);
-  ctx.fill();
-
-  // Hair (long, brown)
-  ctx.fillStyle = '#5a3a1a';
-  ctx.beginPath();
-  ctx.ellipse(-12, -8, 4, 14, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(12, -8, 4, 14, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(0, -20, 13, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  if (dudeLoaded) {
+    ctx.drawImage(dudeImg, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize);
+  } else {
+    ctx.fillStyle = '#e8c090';
+    ctx.beginPath();
+    ctx.arc(0, 0, spriteSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#111';
+    ctx.fillRect(-12, -6, 10, 5);
+    ctx.fillRect(2, -6, 10, 5);
+  }
 
   ctx.restore();
 }
