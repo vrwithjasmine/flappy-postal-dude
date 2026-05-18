@@ -60,14 +60,39 @@ function sayPetition() {
   }
 }
 
-// City skyline (background)
+// Paradise, AZ skyline (low desert town buildings)
 const buildings = [];
-for (let i = 0; i < 15; i++) {
+for (let i = 0; i < 20; i++) {
+  const type = Math.random();
+  let h, w;
+  if (type < 0.3) {
+    // Trailer / low building
+    h = 30 + Math.random() * 40;
+    w = 35 + Math.random() * 30;
+  } else if (type < 0.7) {
+    // Strip mall / store
+    h = 50 + Math.random() * 60;
+    w = 25 + Math.random() * 35;
+  } else {
+    // Taller building (church steeple, gas station sign)
+    h = 80 + Math.random() * 100;
+    w = 15 + Math.random() * 25;
+  }
   buildings.push({
-    x: i * 45,
-    w: 30 + Math.random() * 25,
-    h: 60 + Math.random() * 120,
-    shade: 20 + Math.random() * 30
+    x: i * 35,
+    w, h, type,
+    shade: 25 + Math.random() * 20,
+    roofColor: Math.random() > 0.5 ? '#5a3a2a' : '#4a4a3a'
+  });
+}
+
+// Cacti
+const cacti = [];
+for (let i = 0; i < 6; i++) {
+  cacti.push({
+    x: 30 + Math.random() * 570,
+    h: 20 + Math.random() * 35,
+    arms: Math.floor(Math.random() * 3)
   });
 }
 
@@ -223,56 +248,108 @@ function die() {
 }
 
 function drawBackground() {
-  // Dark sky gradient
+  // Desert sunset sky
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#0a0a1a');
-  grad.addColorStop(0.6, '#1a1a2e');
-  grad.addColorStop(1, '#16213e');
+  grad.addColorStop(0, '#1a0a1a');
+  grad.addColorStop(0.3, '#2a1520');
+  grad.addColorStop(0.5, '#4a2020');
+  grad.addColorStop(0.7, '#6a3520');
+  grad.addColorStop(1, '#3a2515');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // Skyline
+  // Desert mountains in background
+  ctx.fillStyle = '#2a1a15';
+  ctx.beginPath();
+  ctx.moveTo(0, groundY - 60);
+  ctx.lineTo(80, groundY - 130);
+  ctx.lineTo(150, groundY - 90);
+  ctx.lineTo(220, groundY - 150);
+  ctx.lineTo(300, groundY - 100);
+  ctx.lineTo(380, groundY - 160);
+  ctx.lineTo(450, groundY - 110);
+  ctx.lineTo(530, groundY - 140);
+  ctx.lineTo(600, groundY - 80);
+  ctx.lineTo(600, groundY);
+  ctx.lineTo(0, groundY);
+  ctx.fill();
+
+  // Paradise AZ skyline
   for (const b of buildings) {
-    ctx.fillStyle = `rgb(${b.shade}, ${b.shade}, ${b.shade + 10})`;
+    // Building body - dusty desert colors
+    const r = b.shade + 15;
+    const g = b.shade + 5;
+    const bl = b.shade;
+    ctx.fillStyle = `rgb(${r}, ${g}, ${bl})`;
     ctx.fillRect(b.x, groundY - b.h, b.w, b.h);
-    // Windows
-    ctx.fillStyle = `rgba(255, 200, 50, ${0.2 + Math.random() * 0.15})`;
-    for (let wy = groundY - b.h + 8; wy < groundY - 10; wy += 16) {
-      for (let wx = b.x + 5; wx < b.x + b.w - 8; wx += 12) {
-        if (Math.random() > 0.3) {
-          ctx.fillRect(wx, wy, 6, 8);
+
+    // Flat roof top
+    ctx.fillStyle = b.roofColor;
+    ctx.fillRect(b.x - 2, groundY - b.h, b.w + 4, 5);
+
+    // Windows / doors
+    if (b.type < 0.3) {
+      // Trailer - small windows
+      ctx.fillStyle = 'rgba(255, 180, 60, 0.25)';
+      for (let wx = b.x + 6; wx < b.x + b.w - 8; wx += 14) {
+        ctx.fillRect(wx, groundY - b.h + 10, 6, 5);
+      }
+    } else {
+      // Storefronts
+      ctx.fillStyle = 'rgba(255, 180, 60, 0.2)';
+      for (let wy = groundY - b.h + 10; wy < groundY - 10; wy += 18) {
+        for (let wx = b.x + 4; wx < b.x + b.w - 8; wx += 12) {
+          if (Math.random() > 0.4) {
+            ctx.fillRect(wx, wy, 7, 9);
+          }
         }
       }
+    }
+  }
+
+  // Cacti silhouettes
+  ctx.fillStyle = '#1a1210';
+  for (const c of cacti) {
+    // Trunk
+    ctx.fillRect(c.x - 3, groundY - c.h, 6, c.h);
+    // Arms
+    if (c.arms >= 1) {
+      ctx.fillRect(c.x - 12, groundY - c.h * 0.7, 12, 4);
+      ctx.fillRect(c.x - 12, groundY - c.h * 0.7 - 10, 4, 14);
+    }
+    if (c.arms >= 2) {
+      ctx.fillRect(c.x + 3, groundY - c.h * 0.5, 10, 4);
+      ctx.fillRect(c.x + 9, groundY - c.h * 0.5 - 8, 4, 12);
     }
   }
 }
 
 function drawGround() {
-  ctx.fillStyle = '#2d5a27';
+  // Sandy desert ground
+  ctx.fillStyle = '#5a4530';
   ctx.fillRect(0, groundY, W, H - groundY);
 
-  ctx.fillStyle = '#3d7a37';
+  // Sidewalk / road edge
+  ctx.fillStyle = '#6a5540';
   ctx.fillRect(0, groundY, W, 4);
 
-  // Ground pattern
-  ctx.strokeStyle = '#1d4a17';
-  ctx.lineWidth = 1;
-  for (let i = -40; i < W + 40; i += 40) {
+  // Dirt/gravel texture
+  ctx.fillStyle = '#4a3520';
+  for (let i = -40; i < W + 40; i += 20) {
     const x = i - groundScroll;
-    ctx.beginPath();
-    ctx.moveTo(x, groundY + 8);
-    ctx.lineTo(x + 20, groundY + H - groundY);
-    ctx.stroke();
+    ctx.fillRect(x, groundY + 6 + Math.sin(i) * 2, 8, 2);
+    ctx.fillRect(x + 10, groundY + 14 + Math.cos(i) * 3, 5, 2);
   }
 }
 
 function drawPipes(p) {
-  // Pipe body gradient
+  // Rusty metal pipes
   const pGrad = ctx.createLinearGradient(p.x, 0, p.x + pipeWidth, 0);
-  pGrad.addColorStop(0, '#3a7a3a');
-  pGrad.addColorStop(0.3, '#4a9a4a');
-  pGrad.addColorStop(0.7, '#4a9a4a');
-  pGrad.addColorStop(1, '#2a6a2a');
+  pGrad.addColorStop(0, '#4a3020');
+  pGrad.addColorStop(0.2, '#6a4530');
+  pGrad.addColorStop(0.5, '#7a5035');
+  pGrad.addColorStop(0.8, '#6a4530');
+  pGrad.addColorStop(1, '#3a2515');
 
   ctx.fillStyle = pGrad;
 
@@ -283,20 +360,32 @@ function drawPipes(p) {
   const bottomY = p.topH + pipeGap;
   ctx.fillRect(p.x, bottomY, pipeWidth, groundY - bottomY);
 
-  // Pipe caps
+  // Hazard stripe caps
   const capW = pipeWidth + 10;
   const capH = 20;
   const capX = p.x - 5;
 
-  ctx.fillStyle = '#5aba5a';
+  ctx.fillStyle = '#8a5a30';
   ctx.fillRect(capX, p.topH - capH, capW, capH);
   ctx.fillRect(capX, bottomY, capW, capH);
 
+  // Yellow/black hazard stripes on caps
+  ctx.fillStyle = '#cc8800';
+  for (let sx = capX; sx < capX + capW; sx += 12) {
+    ctx.fillRect(sx, p.topH - capH + 2, 6, capH - 4);
+    ctx.fillRect(sx, bottomY + 2, 6, capH - 4);
+  }
+
   // Cap borders
-  ctx.strokeStyle = '#2a6a2a';
+  ctx.strokeStyle = '#2a1a10';
   ctx.lineWidth = 2;
   ctx.strokeRect(capX, p.topH - capH, capW, capH);
   ctx.strokeRect(capX, bottomY, capW, capH);
+
+  // Rust spots
+  ctx.fillStyle = 'rgba(120, 50, 20, 0.3)';
+  ctx.fillRect(p.x + 8, p.topH - 40, 12, 8);
+  ctx.fillRect(p.x + 30, bottomY + 30, 15, 6);
 }
 
 function drawPostalDude() {
