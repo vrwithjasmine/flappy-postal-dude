@@ -39,24 +39,44 @@ let pipeTimer = 0;
 // Particles (shell casings on death)
 let particles = [];
 
-// Sound - petition voice (20 second cooldown)
-let lastPetitionTime = 0;
-const petitionLines = [
-  'Can you sign my petition?',
-  'Sign my petition!',
-  'Would you sign my petition?',
-  'I have a petition for you.',
-  'Hey, sign this.'
+// Speech bubble quotes
+let currentQuote = '';
+let lastQuoteTime = 0;
+let quoteOpacity = 0;
+const quotes = [
+  'Sign my petition.',
+  "I'm not here to cause trouble.",
+  "What a day...",
+  "I just need to get milk.",
+  "I regret nothing.",
+  "This can't be good.",
+  "Now I'm mad.",
+  "I knew I shoulda stayed home.",
+  "Life is just beautiful.",
+  "Is it Friday yet?",
+  "Only my weapon understands me.",
+  "I'm the Postal Dude!",
+  "Paradise... what a dump.",
+  "Wow, what a day.",
+  "That wasn't very nice.",
+  "Buttwipe.",
 ];
 
-function sayPetition() {
-  if ('speechSynthesis' in window) {
-    const line = petitionLines[Math.floor(Math.random() * petitionLines.length)];
-    const utter = new SpeechSynthesisUtterance(line);
-    utter.rate = 1.1;
-    utter.pitch = 0.85;
-    utter.volume = 0.7;
-    speechSynthesis.speak(utter);
+function updateQuote() {
+  if (state !== 'playing') { quoteOpacity = 0; return; }
+  const now = Date.now();
+  if (now - lastQuoteTime >= 15000 || lastQuoteTime === 0) {
+    currentQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    lastQuoteTime = now;
+    quoteOpacity = 1;
+  }
+  const elapsed = now - lastQuoteTime;
+  if (elapsed < 500) {
+    quoteOpacity = elapsed / 500;
+  } else if (elapsed > 12000) {
+    quoteOpacity = Math.max(0, 1 - (elapsed - 12000) / 1500);
+  } else {
+    quoteOpacity = 1;
   }
 }
 
@@ -109,6 +129,9 @@ function reset() {
   pipeTimer = 60;
   score = 0;
   frameCount = 0;
+  lastQuoteTime = 0;
+  currentQuote = '';
+  quoteOpacity = 0;
 }
 
 function flap() {
@@ -118,11 +141,6 @@ function flap() {
     bird.vy = bird.flapPower;
   } else if (state === 'playing') {
     bird.vy = bird.flapPower;
-    const now = Date.now();
-    if (now - lastPetitionTime >= 20000) {
-      sayPetition();
-      lastPetitionTime = now;
-    }
   } else if (state === 'dead' && frameCount > 30) {
     state = 'menu';
   }
@@ -229,6 +247,8 @@ function update() {
     p.life--;
     if (p.life <= 0) particles.splice(i, 1);
   }
+
+  updateQuote();
 
   // Menu bob
   if (state === 'menu') {
@@ -410,6 +430,57 @@ function drawPostalDude() {
   ctx.restore();
 }
 
+function drawSpeechBubble() {
+  if (state !== 'playing' || quoteOpacity <= 0 || !currentQuote) return;
+
+  ctx.save();
+  ctx.globalAlpha = quoteOpacity;
+
+  const bx = bird.x + 30;
+  const by = bird.y - 55;
+  const padding = 8;
+  ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+  const textWidth = ctx.measureText(currentQuote).width;
+  const bubbleW = textWidth + padding * 2;
+  const bubbleH = 24;
+
+  // Keep bubble on screen
+  const drawX = Math.min(Math.max(bx, bubbleW / 2 + 5), W - bubbleW / 2 - 5);
+  const drawY = Math.max(by, 20);
+
+  // Bubble background
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  const r = 8;
+  const x0 = drawX - bubbleW / 2;
+  const y0 = drawY - bubbleH / 2;
+  ctx.moveTo(x0 + r, y0);
+  ctx.lineTo(x0 + bubbleW - r, y0);
+  ctx.quadraticCurveTo(x0 + bubbleW, y0, x0 + bubbleW, y0 + r);
+  ctx.lineTo(x0 + bubbleW, y0 + bubbleH - r);
+  ctx.quadraticCurveTo(x0 + bubbleW, y0 + bubbleH, x0 + bubbleW - r, y0 + bubbleH);
+  ctx.lineTo(x0 + r, y0 + bubbleH);
+  ctx.quadraticCurveTo(x0, y0 + bubbleH, x0, y0 + bubbleH - r);
+  ctx.lineTo(x0, y0 + r);
+  ctx.quadraticCurveTo(x0, y0, x0 + r, y0);
+  ctx.fill();
+
+  // Tail pointing to dude
+  ctx.beginPath();
+  ctx.moveTo(drawX - 8, drawY + bubbleH / 2);
+  ctx.lineTo(bird.x + 10, bird.y - 25);
+  ctx.lineTo(drawX + 2, drawY + bubbleH / 2);
+  ctx.fill();
+
+  // Text
+  ctx.fillStyle = '#1a1a1a';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(currentQuote, drawX, drawY);
+
+  ctx.restore();
+}
+
 function drawParticles() {
   for (const p of particles) {
     ctx.globalAlpha = p.life / 60;
@@ -500,6 +571,7 @@ function gameLoop() {
   }
 
   drawPostalDude();
+  drawSpeechBubble();
   drawParticles();
   drawScore();
 
