@@ -65,7 +65,8 @@ const quotes = [
 function updateQuote() {
   if (state !== 'playing') { quoteOpacity = 0; return; }
   const now = Date.now();
-  if (now - lastQuoteTime >= 15000 || lastQuoteTime === 0) {
+  const quoteInterval = 7000 + Math.random() * 3000;
+  if (now - lastQuoteTime >= quoteInterval || lastQuoteTime === 0) {
     currentQuote = quotes[Math.floor(Math.random() * quotes.length)];
     lastQuoteTime = now;
     quoteOpacity = 1;
@@ -73,8 +74,8 @@ function updateQuote() {
   const elapsed = now - lastQuoteTime;
   if (elapsed < 500) {
     quoteOpacity = elapsed / 500;
-  } else if (elapsed > 12000) {
-    quoteOpacity = Math.max(0, 1 - (elapsed - 12000) / 1500);
+  } else if (elapsed > 5500) {
+    quoteOpacity = Math.max(0, 1 - (elapsed - 5500) / 1500);
   } else {
     quoteOpacity = 1;
   }
