@@ -16,21 +16,43 @@ const bird = {
   w: 56,
   h: 56,
   vy: 0,
-  gravity: 0.45,
-  flapPower: -7.5,
+  gravity: 0.28,
+  flapPower: -5.8,
+  maxFall: 4.5,
   rotation: 0
 };
 
 // Pipes
 let pipes = [];
 const pipeWidth = 70;
-const pipeGap = 160;
-const pipeSpeed = 3;
-const pipeSpawnInterval = 100;
+const pipeGap = 240;
+const pipeSpeed = 2.8;
+const pipeSpawnInterval = 110;
 let pipeTimer = 0;
 
 // Particles (shell casings on death)
 let particles = [];
+
+// Sound - petition voice
+let flapCount = 0;
+const petitionLines = [
+  'Can you sign my petition?',
+  'Sign my petition!',
+  'Would you sign my petition?',
+  'I have a petition for you.',
+  'Hey, sign this.'
+];
+
+function sayPetition() {
+  if ('speechSynthesis' in window) {
+    const line = petitionLines[Math.floor(Math.random() * petitionLines.length)];
+    const utter = new SpeechSynthesisUtterance(line);
+    utter.rate = 1.1;
+    utter.pitch = 0.85;
+    utter.volume = 0.7;
+    speechSynthesis.speak(utter);
+  }
+}
 
 // City skyline (background)
 const buildings = [];
@@ -56,6 +78,7 @@ function reset() {
   pipeTimer = 60;
   score = 0;
   frameCount = 0;
+  flapCount = 0;
 }
 
 function flap() {
@@ -63,8 +86,13 @@ function flap() {
     state = 'playing';
     reset();
     bird.vy = bird.flapPower;
+    flapCount = 1;
   } else if (state === 'playing') {
     bird.vy = bird.flapPower;
+    flapCount++;
+    if (flapCount % 3 === 0) {
+      sayPetition();
+    }
   } else if (state === 'dead' && frameCount > 30) {
     state = 'menu';
   }
@@ -78,8 +106,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 function spawnPipe() {
-  const minTop = 80;
-  const maxTop = groundY - pipeGap - 80;
+  const minTop = 60;
+  const maxTop = groundY - pipeGap - 60;
   const topH = minTop + Math.random() * (maxTop - minTop);
   pipes.push({
     x: W + 10,
@@ -105,10 +133,13 @@ function update() {
   frameCount++;
 
   if (state === 'playing') {
-    // Bird physics
+    // Bird physics - gentle gravity, capped fall speed
     bird.vy += bird.gravity;
+    if (bird.vy > bird.maxFall) bird.vy = bird.maxFall;
     bird.y += bird.vy;
-    bird.rotation = Math.min(bird.vy * 3, 70);
+
+    // Gentle rotation - less dramatic tilt
+    bird.rotation = Math.min(bird.vy * 2, 35);
 
     // Ground scroll
     groundScroll = (groundScroll + pipeSpeed) % 40;
@@ -269,6 +300,29 @@ function drawPostalDude() {
   ctx.rotate(bird.rotation * Math.PI / 180);
   ctx.scale(1.4, 1.4);
 
+  // Arms flapping - drawn BEHIND body, angled down/out
+  const flapAngle = state === 'playing' ? Math.sin(frameCount * 0.3) * 0.5 : Math.sin(frameCount * 0.08) * 0.15;
+
+  // Left arm (behind body)
+  ctx.save();
+  ctx.translate(-14, 8);
+  ctx.rotate(-1.2 + flapAngle);
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(-2, -2, 20, 6);
+  ctx.fillStyle = '#e8c090';
+  ctx.fillRect(16, -2, 6, 6);
+  ctx.restore();
+
+  // Right arm (behind body)
+  ctx.save();
+  ctx.translate(14, 8);
+  ctx.rotate(1.2 - flapAngle);
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(-18, -2, 20, 6);
+  ctx.fillStyle = '#e8c090';
+  ctx.fillRect(-24, -2, 6, 6);
+  ctx.restore();
+
   // Trench coat body
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(-14, -4, 28, 22);
@@ -305,27 +359,6 @@ function drawPostalDude() {
   ctx.beginPath();
   ctx.ellipse(0, -20, 13, 5, 0, 0, Math.PI * 2);
   ctx.fill();
-
-  // Arms flapping
-  const flapAngle = state === 'playing' ? Math.sin(frameCount * 0.3) * 0.4 : Math.sin(frameCount * 0.08) * 0.15;
-
-  ctx.save();
-  ctx.translate(-14, 2);
-  ctx.rotate(-0.8 + flapAngle);
-  ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(-2, -2, 20, 6);
-  ctx.fillStyle = '#e8c090';
-  ctx.fillRect(16, -2, 6, 6);
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(14, 2);
-  ctx.rotate(0.8 - flapAngle);
-  ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(-18, -2, 20, 6);
-  ctx.fillStyle = '#e8c090';
-  ctx.fillRect(-24, -2, 6, 6);
-  ctx.restore();
 
   ctx.restore();
 }
