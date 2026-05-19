@@ -588,38 +588,44 @@ function drawSplash() {
   const fadeIn = Math.min(1, splashTimer / 40);
   ctx.globalAlpha = fadeIn;
 
+  // Layout: center the whole block vertically
+  // Redux logo + 20px gap + VR logo + 30px gap + COMING SOON + 16px + credits
+  const rw = 420;
+  const rh = rw * (reduxLoaded ? reduxLogo.naturalHeight / reduxLogo.naturalWidth : 0.4);
+  const vw = 220;
+  const vh = vw * (vrLoaded ? vrLogo.naturalHeight / vrLogo.naturalWidth : 1);
+  const textH = 32 + 16 + 13;
+  const totalH = rh + 20 + vh + 30 + textH;
+  const startY = (H - totalH) / 2;
+
   // POSTAL 2 Redux logo (wide, top)
   if (reduxLoaded) {
-    const rw = 420;
-    const rh = rw * (reduxLogo.naturalHeight / reduxLogo.naturalWidth);
-    ctx.drawImage(reduxLogo, (W - rw) / 2, 120, rw, rh);
+    ctx.drawImage(reduxLogo, (W - rw) / 2, startY, rw, rh);
+  }
+
+  // Blinking "PINCH TO START" between logos
+  const blink = Math.sin(splashTimer * 0.08) > 0;
+  if (blink && splashTimer > 60) {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '16px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('PINCH TO START', W / 2, startY + rh + 14);
   }
 
   // POSTAL 2 VR logo (square, below)
   if (vrLoaded) {
-    const vw = 220;
-    const vh = vw * (vrLogo.naturalHeight / vrLogo.naturalWidth);
-    ctx.drawImage(vrLogo, (W - vw) / 2, 310, vw, vh);
+    ctx.drawImage(vrLogo, (W - vw) / 2, startY + rh + 20, vw, vh);
   }
 
   // "COMING SOON" text
   ctx.fillStyle = '#FF6B35';
   ctx.font = 'bold 32px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('COMING SOON', W / 2, 540);
+  ctx.fillText('COMING SOON', W / 2, startY + rh + 20 + vh + 50);
 
   // Credits
   ctx.fillStyle = 'rgba(255,255,255,0.35)';
   ctx.font = '13px "Segoe UI", system-ui, sans-serif';
-  ctx.fillText('Made by Jasmine Uniza', W / 2, 572);
-
-  // Blinking "tap to skip"
-  const blink = Math.sin(splashTimer * 0.08) > 0;
-  if (blink && splashTimer > 60) {
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '16px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText('PINCH TO SKIP', W / 2, 595);
-  }
+  ctx.fillText('Made by Jasmine Uniza', W / 2, startY + rh + 20 + vh + 72);
 
   ctx.globalAlpha = 1;
 }
