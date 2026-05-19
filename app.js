@@ -15,6 +15,10 @@ let score = 0;
 let highScore = parseInt(localStorage.getItem('flappyPostalHigh') || '0');
 let frameCount = 0;
 
+// Delta time - keeps speed consistent across frame rates
+let lastTime = 0;
+const TARGET_FPS = 60;
+
 // Bird (POSTAL Dude)
 const bird = {
   x: 150,
@@ -87,15 +91,12 @@ for (let i = 0; i < 20; i++) {
   const type = Math.random();
   let h, w;
   if (type < 0.3) {
-    // Trailer / low building
     h = 30 + Math.random() * 40;
     w = 35 + Math.random() * 30;
   } else if (type < 0.7) {
-    // Strip mall / store
     h = 50 + Math.random() * 60;
     w = 25 + Math.random() * 35;
   } else {
-    // Taller building (church steeple, gas station sign)
     h = 80 + Math.random() * 100;
     w = 15 + Math.random() * 25;
   }
@@ -178,39 +179,33 @@ function spawnParticles(x, y) {
   }
 }
 
-function update() {
+function update(dt) {
   frameCount++;
 
   if (state === 'playing') {
-    // Bird physics - gentle gravity, capped fall speed
-    bird.vy += bird.gravity;
+    // Bird physics - delta-time adjusted
+    bird.vy += bird.gravity * dt;
     if (bird.vy > bird.maxFall) bird.vy = bird.maxFall;
-    bird.y += bird.vy;
+    bird.y += bird.vy * dt;
 
-    // Gentle rotation - less dramatic tilt
     bird.rotation = Math.min(bird.vy * 2, 35);
 
-    // Ground scroll
-    groundScroll = (groundScroll + pipeSpeed) % 40;
+    groundScroll = (groundScroll + pipeSpeed * dt) % 40;
 
-    // Pipe spawning
-    pipeTimer++;
+    pipeTimer += dt;
     if (pipeTimer >= pipeSpawnInterval) {
       spawnPipe();
       pipeTimer = 0;
     }
 
-    // Pipe movement
     for (let i = pipes.length - 1; i >= 0; i--) {
-      pipes[i].x -= pipeSpeed;
+      pipes[i].x -= pipeSpeed * dt;
 
-      // Score
       if (!pipes[i].scored && pipes[i].x + pipeWidth < bird.x) {
         pipes[i].scored = true;
         score++;
       }
 
-      // Remove offscreen
       if (pipes[i].x + pipeWidth < -10) {
         pipes.splice(i, 1);
       }
@@ -222,13 +217,11 @@ function update() {
     const bw = bird.w - 8;
     const bh = bird.h - 8;
 
-    // Ground/ceiling
     if (bird.y + bird.h / 2 > groundY || bird.y - bird.h / 2 < 0) {
       die();
       return;
     }
 
-    // Pipe collision
     for (const p of pipes) {
       if (bx + bw > p.x && bx < p.x + pipeWidth) {
         if (by < p.topH || by + bh > p.topH + pipeGap) {
@@ -242,10 +235,10 @@ function update() {
   // Update particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vy += 0.2;
-    p.life--;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 0.2 * dt;
+    p.life -= dt;
     if (p.life <= 0) particles.splice(i, 1);
   }
 
@@ -269,7 +262,6 @@ function die() {
 }
 
 function drawBackground() {
-  // Desert sunset sky
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, '#1a0a1a');
   grad.addColorStop(0.3, '#2a1520');
@@ -279,7 +271,6 @@ function drawBackground() {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // Desert mountains in background
   ctx.fillStyle = '#2a1a15';
   ctx.beginPath();
   ctx.moveTo(0, groundY - 60);
@@ -295,28 +286,22 @@ function drawBackground() {
   ctx.lineTo(0, groundY);
   ctx.fill();
 
-  // Paradise AZ skyline
   for (const b of buildings) {
-    // Building body - dusty desert colors
     const r = b.shade + 15;
     const g = b.shade + 5;
     const bl = b.shade;
     ctx.fillStyle = `rgb(${r}, ${g}, ${bl})`;
     ctx.fillRect(b.x, groundY - b.h, b.w, b.h);
 
-    // Flat roof top
     ctx.fillStyle = b.roofColor;
     ctx.fillRect(b.x - 2, groundY - b.h, b.w + 4, 5);
 
-    // Windows / doors
     if (b.type < 0.3) {
-      // Trailer - small windows
       ctx.fillStyle = 'rgba(255, 180, 60, 0.25)';
       for (let wx = b.x + 6; wx < b.x + b.w - 8; wx += 14) {
         ctx.fillRect(wx, groundY - b.h + 10, 6, 5);
       }
     } else {
-      // Storefronts
       ctx.fillStyle = 'rgba(255, 180, 60, 0.2)';
       for (let wy = groundY - b.h + 10; wy < groundY - 10; wy += 18) {
         for (let wx = b.x + 4; wx < b.x + b.w - 8; wx += 12) {
@@ -328,12 +313,9 @@ function drawBackground() {
     }
   }
 
-  // Cacti silhouettes
   ctx.fillStyle = '#1a1210';
   for (const c of cacti) {
-    // Trunk
     ctx.fillRect(c.x - 3, groundY - c.h, 6, c.h);
-    // Arms
     if (c.arms >= 1) {
       ctx.fillRect(c.x - 12, groundY - c.h * 0.7, 12, 4);
       ctx.fillRect(c.x - 12, groundY - c.h * 0.7 - 10, 4, 14);
@@ -346,15 +328,12 @@ function drawBackground() {
 }
 
 function drawGround() {
-  // Sandy desert ground
   ctx.fillStyle = '#5a4530';
   ctx.fillRect(0, groundY, W, H - groundY);
 
-  // Sidewalk / road edge
   ctx.fillStyle = '#6a5540';
   ctx.fillRect(0, groundY, W, 4);
 
-  // Dirt/gravel texture
   ctx.fillStyle = '#4a3520';
   for (let i = -40; i < W + 40; i += 20) {
     const x = i - groundScroll;
@@ -364,7 +343,6 @@ function drawGround() {
 }
 
 function drawPipes(p) {
-  // Rusty metal pipes
   const pGrad = ctx.createLinearGradient(p.x, 0, p.x + pipeWidth, 0);
   pGrad.addColorStop(0, '#4a3020');
   pGrad.addColorStop(0.2, '#6a4530');
@@ -374,14 +352,11 @@ function drawPipes(p) {
 
   ctx.fillStyle = pGrad;
 
-  // Top pipe
   ctx.fillRect(p.x, 0, pipeWidth, p.topH);
 
-  // Bottom pipe
   const bottomY = p.topH + pipeGap;
   ctx.fillRect(p.x, bottomY, pipeWidth, groundY - bottomY);
 
-  // Hazard stripe caps
   const capW = pipeWidth + 10;
   const capH = 20;
   const capX = p.x - 5;
@@ -390,20 +365,17 @@ function drawPipes(p) {
   ctx.fillRect(capX, p.topH - capH, capW, capH);
   ctx.fillRect(capX, bottomY, capW, capH);
 
-  // Yellow/black hazard stripes on caps
   ctx.fillStyle = '#cc8800';
   for (let sx = capX; sx < capX + capW; sx += 12) {
     ctx.fillRect(sx, p.topH - capH + 2, 6, capH - 4);
     ctx.fillRect(sx, bottomY + 2, 6, capH - 4);
   }
 
-  // Cap borders
   ctx.strokeStyle = '#2a1a10';
   ctx.lineWidth = 2;
   ctx.strokeRect(capX, p.topH - capH, capW, capH);
   ctx.strokeRect(capX, bottomY, capW, capH);
 
-  // Rust spots
   ctx.fillStyle = 'rgba(120, 50, 20, 0.3)';
   ctx.fillRect(p.x + 8, p.topH - 40, 12, 8);
   ctx.fillRect(p.x + 30, bottomY + 30, 15, 6);
@@ -437,22 +409,20 @@ function drawSpeechBubble() {
   ctx.save();
   ctx.globalAlpha = quoteOpacity;
 
-  const bx = bird.x + 30;
-  const by = bird.y - 55;
-  const padding = 8;
-  ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+  const bx = bird.x + 40;
+  const by = bird.y - 70;
+  const padding = 14;
+  ctx.font = 'bold 28px "Segoe UI", system-ui, sans-serif';
   const textWidth = ctx.measureText(currentQuote).width;
   const bubbleW = textWidth + padding * 2;
-  const bubbleH = 24;
+  const bubbleH = 44;
 
-  // Keep bubble on screen
   const drawX = Math.min(Math.max(bx, bubbleW / 2 + 5), W - bubbleW / 2 - 5);
-  const drawY = Math.max(by, 20);
+  const drawY = Math.max(by, 30);
 
-  // Bubble background
   ctx.fillStyle = '#fff';
   ctx.beginPath();
-  const r = 8;
+  const r = 12;
   const x0 = drawX - bubbleW / 2;
   const y0 = drawY - bubbleH / 2;
   ctx.moveTo(x0 + r, y0);
@@ -466,14 +436,12 @@ function drawSpeechBubble() {
   ctx.quadraticCurveTo(x0, y0, x0 + r, y0);
   ctx.fill();
 
-  // Tail pointing to dude
   ctx.beginPath();
-  ctx.moveTo(drawX - 8, drawY + bubbleH / 2);
-  ctx.lineTo(bird.x + 10, bird.y - 25);
-  ctx.lineTo(drawX + 2, drawY + bubbleH / 2);
+  ctx.moveTo(drawX - 12, drawY + bubbleH / 2);
+  ctx.lineTo(bird.x + 15, bird.y - 30);
+  ctx.lineTo(drawX + 4, drawY + bubbleH / 2);
   ctx.fill();
 
-  // Text
   ctx.fillStyle = '#1a1a1a';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -561,8 +529,15 @@ function drawDead() {
   }
 }
 
-function gameLoop() {
-  update();
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const elapsed = timestamp - lastTime;
+  lastTime = timestamp;
+
+  // dt = how many "60fps frames" worth of time passed
+  const dt = Math.min(elapsed / (1000 / TARGET_FPS), 3);
+
+  update(dt);
 
   drawBackground();
   drawGround();
@@ -583,4 +558,4 @@ function gameLoop() {
 }
 
 reset();
-gameLoop();
+requestAnimationFrame(gameLoop);
