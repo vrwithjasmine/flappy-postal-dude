@@ -64,12 +64,27 @@ const quotes = [
   "Wow, what a day.",
   "That wasn't very nice.",
   "Buttwipe.",
+  "I'm way too sober for this.",
+  "Don't blame me, I voted.",
+  "My day just keeps getting better.",
+  "I wonder if I left the oven on.",
+  "Violence is never the answer... usually.",
+  "Where's the bathroom?",
+  "Another day in paradise.",
+  "That's gonna leave a mark.",
+  "I should've been a dentist.",
+  "Somebody's gonna pay for this.",
+  "This town is full of idiots.",
+  "I need a vacation.",
+  "Champ!",
+  "Not my problem... yet.",
+  "Think happy thoughts...",
 ];
 
 function updateQuote() {
   if (state !== 'playing') { quoteOpacity = 0; return; }
   const now = Date.now();
-  const quoteInterval = 7000 + Math.random() * 3000;
+  const quoteInterval = 10000 + Math.random() * 2000;
   if (now - lastQuoteTime >= quoteInterval || lastQuoteTime === 0) {
     currentQuote = quotes[Math.floor(Math.random() * quotes.length)];
     lastQuoteTime = now;
@@ -128,7 +143,7 @@ function reset() {
   bird.rotation = 0;
   pipes = [];
   particles = [];
-  pipeTimer = 60;
+  pipeTimer = 90;
   score = 0;
   frameCount = 0;
   lastQuoteTime = 0;
