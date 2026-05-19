@@ -268,6 +268,8 @@ function flap() {
     state = 'playing';
     reset();
     bird.vy = bird.flapPower;
+    bgMusic.currentTime = 0;
+    bgMusic.play();
   } else if (state === 'playing') {
     bird.vy = bird.flapPower;
   } else if (state === 'dead' && frameCount > 30) {
@@ -393,6 +395,7 @@ function update(dt) {
 function die() {
   state = 'dead';
   frameCount = 0;
+  bgMusic.pause();
   if (score > highScore) {
     highScore = score;
     localStorage.setItem('flappyPostalHigh', highScore.toString());
