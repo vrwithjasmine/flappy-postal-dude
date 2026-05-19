@@ -9,8 +9,21 @@ dudeImg.src = 'img/postal-dude.png';
 let dudeLoaded = false;
 dudeImg.onload = () => { dudeLoaded = true; };
 
+// Load splash logos
+const reduxLogo = new Image();
+reduxLogo.src = 'img/postal2-redux-logo.png';
+let reduxLoaded = false;
+reduxLogo.onload = () => { reduxLoaded = true; };
+
+const vrLogo = new Image();
+vrLogo.src = 'img/postal2-vr-logo.png';
+let vrLoaded = false;
+vrLogo.onload = () => { vrLoaded = true; };
+
 // Game state
-let state = 'menu'; // menu, playing, dead
+let state = 'splash'; // splash, menu, playing, dead
+let splashTimer = 0;
+const splashDuration = 240; // ~4 seconds at 60fps
 let score = 0;
 let highScore = parseInt(localStorage.getItem('flappyPostalHigh') || '0');
 let frameCount = 0;
@@ -35,10 +48,17 @@ const bird = {
 // Pipes
 let pipes = [];
 const pipeWidth = 70;
-const pipeGap = 240;
-const pipeSpeed = 2.8;
-const pipeSpawnInterval = 110;
 let pipeTimer = 0;
+
+// Difficulty scaling - values shift as score climbs
+function getDifficulty() {
+  const s = score;
+  return {
+    pipeGap: Math.max(160, 240 - s * 5),
+    pipeSpeed: Math.min(5, 2.8 + s * 0.12),
+    spawnInterval: Math.max(65, 110 - s * 2.5)
+  };
+}
 
 // Particles (shell casings on death)
 let particles = [];
@@ -152,7 +172,10 @@ function reset() {
 }
 
 function flap() {
-  if (state === 'menu') {
+  if (state === 'splash') {
+    state = 'menu';
+    splashTimer = 0;
+  } else if (state === 'menu') {
     state = 'playing';
     reset();
     bird.vy = bird.flapPower;
@@ -171,12 +194,14 @@ document.addEventListener('keydown', (e) => {
 });
 
 function spawnPipe() {
+  const { pipeGap } = getDifficulty();
   const minTop = 60;
   const maxTop = groundY - pipeGap - 60;
   const topH = minTop + Math.random() * (maxTop - minTop);
   pipes.push({
     x: W + 10,
     topH: topH,
+    gap: pipeGap,
     scored: false
   });
 }
@@ -205,16 +230,17 @@ function update(dt) {
 
     bird.rotation = Math.min(bird.vy * 2, 35);
 
-    groundScroll = (groundScroll + pipeSpeed * dt) % 40;
+    const diff = getDifficulty();
+    groundScroll = (groundScroll + diff.pipeSpeed * dt) % 40;
 
     pipeTimer += dt;
-    if (pipeTimer >= pipeSpawnInterval) {
+    if (pipeTimer >= diff.spawnInterval) {
       spawnPipe();
       pipeTimer = 0;
     }
 
     for (let i = pipes.length - 1; i >= 0; i--) {
-      pipes[i].x -= pipeSpeed * dt;
+      pipes[i].x -= diff.pipeSpeed * dt;
 
       if (!pipes[i].scored && pipes[i].x + pipeWidth < bird.x) {
         pipes[i].scored = true;
@@ -239,7 +265,7 @@ function update(dt) {
 
     for (const p of pipes) {
       if (bx + bw > p.x && bx < p.x + pipeWidth) {
-        if (by < p.topH || by + bh > p.topH + pipeGap) {
+        if (by < p.topH || by + bh > p.topH + p.gap) {
           die();
           return;
         }
@@ -258,6 +284,15 @@ function update(dt) {
   }
 
   updateQuote();
+
+  // Splash auto-advance
+  if (state === 'splash') {
+    splashTimer += dt;
+    if (splashTimer >= splashDuration) {
+      state = 'menu';
+      splashTimer = 0;
+    }
+  }
 
   // Menu bob
   if (state === 'menu') {
@@ -369,7 +404,7 @@ function drawPipes(p) {
 
   ctx.fillRect(p.x, 0, pipeWidth, p.topH);
 
-  const bottomY = p.topH + pipeGap;
+  const bottomY = p.topH + p.gap;
   ctx.fillRect(p.x, bottomY, pipeWidth, groundY - bottomY);
 
   const capW = pipeWidth + 10;
@@ -544,6 +579,51 @@ function drawDead() {
   }
 }
 
+function drawSplash() {
+  // Dark background
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Fade in
+  const fadeIn = Math.min(1, splashTimer / 40);
+  ctx.globalAlpha = fadeIn;
+
+  // POSTAL 2 Redux logo (wide, top)
+  if (reduxLoaded) {
+    const rw = 420;
+    const rh = rw * (reduxLogo.naturalHeight / reduxLogo.naturalWidth);
+    ctx.drawImage(reduxLogo, (W - rw) / 2, 120, rw, rh);
+  }
+
+  // POSTAL 2 VR logo (square, below)
+  if (vrLoaded) {
+    const vw = 220;
+    const vh = vw * (vrLogo.naturalHeight / vrLogo.naturalWidth);
+    ctx.drawImage(vrLogo, (W - vw) / 2, 310, vw, vh);
+  }
+
+  // "COMING SOON" text
+  ctx.fillStyle = '#FF6B35';
+  ctx.font = 'bold 32px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('COMING SOON', W / 2, 540);
+
+  // Credits
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '13px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Made by Jasmine Uniza', W / 2, 572);
+
+  // Blinking "tap to skip"
+  const blink = Math.sin(splashTimer * 0.08) > 0;
+  if (blink && splashTimer > 60) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '16px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('PINCH TO SKIP', W / 2, 595);
+  }
+
+  ctx.globalAlpha = 1;
+}
+
 function gameLoop(timestamp) {
   if (!lastTime) lastTime = timestamp;
   const elapsed = timestamp - lastTime;
@@ -554,20 +634,24 @@ function gameLoop(timestamp) {
 
   update(dt);
 
-  drawBackground();
-  drawGround();
+  if (state === 'splash') {
+    drawSplash();
+  } else {
+    drawBackground();
+    drawGround();
 
-  for (const p of pipes) {
-    drawPipes(p);
+    for (const p of pipes) {
+      drawPipes(p);
+    }
+
+    drawPostalDude();
+    drawSpeechBubble();
+    drawParticles();
+    drawScore();
+
+    if (state === 'menu') drawMenu();
+    if (state === 'dead') drawDead();
   }
-
-  drawPostalDude();
-  drawSpeechBubble();
-  drawParticles();
-  drawScore();
-
-  if (state === 'menu') drawMenu();
-  if (state === 'dead') drawDead();
 
   requestAnimationFrame(gameLoop);
 }
