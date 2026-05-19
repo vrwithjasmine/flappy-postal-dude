@@ -20,6 +20,12 @@ vrLogo.src = 'img/postal2-vr-logo.png';
 let vrLoaded = false;
 vrLogo.onload = () => { vrLoaded = true; };
 
+// Background music
+const bgMusic = new Audio('img/map_muzak.ogg');
+bgMusic.loop = true;
+bgMusic.volume = 0.15;
+let musicStarted = false;
+
 // Game state
 let state = 'splash'; // splash, menu, playing, dead
 let splashTimer = 0;
@@ -251,6 +257,10 @@ function reset() {
 }
 
 function flap() {
+  if (!musicStarted) {
+    bgMusic.play();
+    musicStarted = true;
+  }
   if (state === 'splash') {
     state = 'menu';
     splashTimer = 0;
